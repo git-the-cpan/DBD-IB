@@ -1,4 +1,4 @@
-#$Id: IB.pm,v 1.6 1999/07/31 22:08:36 edwin Exp $
+#$Id: IB.pm,v 1.14 1999/09/19 07:14:10 edwin Exp $
 
 use strict;
 
@@ -9,7 +9,7 @@ package DBD::IB;
 
 use vars qw($VERSION $err $errstr $drh);
 
-$VERSION = '0.02';
+$VERSION = '0.021';
 
 $err = 0;
 $errstr = "";
@@ -53,7 +53,6 @@ sub connect {
         ($key, $val) = $pair =~ m{(.+)=(.*)};
         if ($key eq 'host') { $conn{Server} = $val}
         elsif ($key =~ m{database}) { $conn{Path} = $val }
-        elsif ($key eq 'port') { $conn{Port} = $val }
         elsif ($key =~ m{protocol}i) { $conn{Protocol} = $val }
         elsif ($key =~ m{role}i) {  $conn{Role} = $val }
         elsif ($key =~ m{charset}i) { $conn{Charset} = $val }
@@ -106,6 +105,7 @@ sub DESTROY { undef; }
 #   rollback
 #   disconnect
 #   do
+#   ping
 #   STORE
 #   FETCH
 #   DESTROY
@@ -116,7 +116,7 @@ $DBD::IB::db::imp_data_size = $DBD::IB::db::imp_data_size= 0;
 
 sub prepare 
 {
-    my($dbh, $statement, @attribs)= @_;
+    my($dbh, $statement, $attribs)= @_;
     my $h = $dbh->FETCH('ib_trans_handle');
 
     if (!$h)
@@ -124,9 +124,15 @@ sub prepare
         return $dbh->DBI::set_err(-1, "Fail to get transaction handle");
     }
 
+    $attribs->{Separator} = undef unless exists ($attribs->{Separator});
+    $attribs->{DateFormat} = "%c" unless exists ($attribs->{DateFormat});
+
     my $st = new IBPerl::Statement(
         Transaction => $h,
-        Stmt => $statement);
+        Stmt => $statement,
+        Separator => $attribs->{Separator},
+        DateFormat => $attribs->{DateFormat},
+    );
 
     if ($st->{Handle} < 0) {
         return $dbh->DBI::set_err(-1, $st->{Error});
@@ -222,6 +228,7 @@ sub do
     {
         return $sth->DBI::set_err(1, $st->{Error});
     }   
+    _commit($dbh) if ($dbh->{AutoCommit});
     -1;
 }
 
@@ -286,32 +293,49 @@ $DBD::IB::st::imp_data_size = $DBD::IB::st::imp_data_size = 0;
 
 sub bind_param
 {
-    my($sth, $pNum, $val, $attr) = @_;
+    my ($sth, $pNum, $val, $attr) = @_;
+    my $type = (ref $attr) ? $attr->{TYPE} : $attr;
+    if ($type) {
+        my $dbh = $sth->{'Database'};
+        $val = $dbh->quote($sth, $type);
+    }
     $sth->{ib_params}->[$pNum-1] = $val;
     1;
 }
 
 sub execute
 {
-    my ($sth, @params) = @_;
+    my ($sth, @bind_values) = @_;
+    my $params = (@bind_values) ? \@bind_values : 
+                 $sth->FETCH('ib_params');
+    my $num_param = $sth->FETCH('NUM_OF_PARAMS');
+
+    if (@$params != $num_param) {
+        return $sth->DBI::set_err(1, 'Invalid number of params');       
+    }
+
     my $st = $sth->{'ib_stmt_handle'};
     my $stmt = $sth->{'ib_stmt'};
+    my $dbh = $sth->{'Database'};
 
 # use open() for select and execute() for non-select
-    if ($stmt =~ m{^\s*?SELECT}i)
+# execute procedure doesn't work at IBPerl
+    if ($stmt =~ m{^\s*?SELECT}i or 
+        $stmt =~ m{^\s*?EXECUTE\s+PROCEDURE}i)
     {
-        if ($st->IBPerl::Statement::open(@params) < 0)
+        if ($st->IBPerl::Statement::open(@$params) < 0)
         {
             return $sth->DBI::set_err(1, $st->{Error});
         }
     }
     else
     {
-        if ($st->IBPerl::Statement::execute(@params) < 0)
+        if ($st->IBPerl::Statement::execute(@$params) < 0)
         {
             return $sth->DBI::set_err(1, $st->{Error});
         }
 #       $sth->finish; #not work for non-select
+        DBD::IB::db::_commit($dbh) if ($dbh->{AutoCommit});
     }
     -1;
 }
@@ -438,7 +462,7 @@ InterBase allows you to connect with specifiying Role, Protocol, Cache, and
 Charset. These parameters can be passed to InterBase via $dsn of DBI connect 
 method. Eg:
 
-  $dsn = 'dbi:IB:database=/path/to/data.gdb;protocol=IPX/SPX';
+  $dsn = 'dbi:IB:database=/path/to/data.gdb;charset=ISO8859_1';
 
 =head1 PREREQUISITE
 
@@ -446,12 +470,13 @@ method. Eg:
 
 =item * InterBase client
 
+Available at http://www.interbase.com/,
+
 =item * IBPerl 0.7, by Bill Karwin
 
-=back
+Don't worry, it is included in this distribution.
 
-Both are available at http://www.interbase.com/, for more information, read the 
-documentation of IBPerl.
+=back
 
 =head1 INSTALLATION
 
@@ -491,6 +516,8 @@ InterBase specific behaviour:
 
 This module has been tested on Linux (2.0.33, 2.0.34), IBPerl 0.7, 
 Perl 5.004_04, to access InterBase 4.0 for Linux, and InterBase 5.5 for NT.
+It has also been used under mod_perl and Apache::DBI with no problems
+reported (yet).
 
 =head1 KNOWN BUGS
 
@@ -501,7 +528,7 @@ This sequence won't work:
   $dbh->do("drop table TBL");
 
 Workaround: Change the commit with disconnect, and then connect again. This
-bug occurs at IBPerl level. Try some examples in eg/ibperl directory.
+bug seems to occurs at IBPerl level. Try some examples in eg/ibperl directory.
 
 =head1 BUG REPORTS
 
@@ -510,6 +537,11 @@ Please send any bug report to dbi-users mailing list
 the script that got the problem, and the output of DBI trace method.
 
 =head1 HISTORY
+
+B<Version 0.021, September 19, 1999>
+
+Separator and DateFormat options works for prepare() and do(). bind_param()
+now works. One more fix to AutoCommit behaviour.
 
 B<Version 0.02, July 31, 1999>
 

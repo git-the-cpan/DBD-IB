@@ -37,13 +37,14 @@ DESCRIPTION
     Cache, and Charset. These parameters can be passed to InterBase
     via $dsn of DBI connect method. Eg:
 
-      $dsn = 'dbi:IB:database=/path/to/data.gdb;protocol=IPX/SPX';
+      $dsn = 'dbi:IB:database=/path/to/data.gdb;charset=ISO8859_1';
 
 PREREQUISITE
     * InterBase client
+      Available at http://www.interbase.com/,
+
     * IBPerl 0.7, by Bill Karwin
-    Both are available at http://www.interbase.com/, for more
-    information, read the documentation of IBPerl.
+      Don't worry, it is included in this distribution.
 
 INSTALLATION
     Run:
@@ -72,7 +73,8 @@ WARNING
 TESTED PLATFORMS
     This module has been tested on Linux (2.0.33, 2.0.34), IBPerl
     0.7, Perl 5.004_04, to access InterBase 4.0 for Linux, and
-    InterBase 5.5 for NT.
+    InterBase 5.5 for NT. It has also been used under mod_perl and
+    Apache::DBI with no problems reported (yet).
 
 KNOWN BUGS
     This sequence won't work:
@@ -82,8 +84,8 @@ KNOWN BUGS
       $dbh->do("drop table TBL");
 
     Workaround: Change the commit with disconnect, and then connect
-    again. This bug occurs at IBPerl level. Try some examples in
-    eg/ibperl directory.
+    again. This bug seems to occurs at IBPerl level. Try some
+    examples in eg/ibperl directory.
 
 BUG REPORTS
     Please send any bug report to dbi-users mailing list
@@ -92,6 +94,11 @@ BUG REPORTS
     of DBI trace method.
 
 HISTORY
+    Version 0.021, September 19, 1999
+
+    Separator and DateFormat options works for prepare() and do().
+    bind_param() now works. One more fix to AutoCommit behaviour.
+
     Version 0.02, July 31, 1999
 
     Alpha code. Major enhancement from the previous pre-alpha code.
