@@ -1,0 +1,11 @@
+This directory contains two example scripts that demonstrate a bug in
+IBPerl.
+Both scripts do exactly the same thing: connect to a test database, create a
+table, commit, insert two records, commit, and drop the table.
+
+The first script should be run to isql:
+$ /path/to/your/isql < succeed.sql
+
+This script works without problem, and then run fail.pl that uses IBPerl to
+do the same thing.
+

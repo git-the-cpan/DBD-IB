@@ -7,8 +7,7 @@ use DBI;
 $dbpath = 'test.gdb';
 $dbh = DBI->connect("dbi:IB:database=$dbpath") or die $DBI::errstr;
 
-$cursor = $dbh->prepare("SELECT * FROM SIMPLE ORDER BY PERSON_ID");
-$cursor->execute;
+$stmt = "SELECT * FROM SIMPLE ORDER BY PERSON_ID";
 
 format STDOUT_TOP =
   ID PERSON                    COMMENT
@@ -23,9 +22,12 @@ $row[2]
 
 .
 
-while (@row = $cursor->fetchrow_array) {
+$array_ref = $dbh->selectall_arrayref($stmt);
+
+for (@{$array_ref}) {
+    @row = @{$_};
     write;
 }
 
 $dbh->disconnect;
-__END__
+
