@@ -1,0 +1,57 @@
+NAME
+    DBD::IB - InterBase driver for the Perl5 DataBase Interface
+
+SYNOPSIS
+      use DBI;
+      
+      $dbpath = '/usr/interbase/data/perl_example.gdb';
+      $dbh = DBI->connect(DBI:IB:database=$dbpath) or die "DBI::errstr";
+      $sth = $dbh->prepare("select * from SIMPLE") or die $dbh->errstr;
+      $sth->execute;
+      while (@row = $sth->fetchrow_array))
+      {
+        print @row, "\n";
+      }
+      $dbh->commit;
+      $dbh->disconnect;  
+
+    For more examples, see eg/ directory.
+
+DESCRIPTION
+    Currently this is a wrapper DBD module on top of IBPerl, written
+    in pure perl. For this is an alpha code, so use with caution!
+
+PREREQUISITE
+    * InterBase client
+    * IBPerl, by Bill Karwin <bkarwin@interbase.com>
+    Both are available at http://www.interbase.com, for more
+    information, read the documentation of IBPerl.
+
+WARNING
+    Not fully tested.
+
+HISTORY
+    * July 23, 1999
+      Alpha code. An almost complete rewrite of DBI::IB in pure
+      perl. Problems during handles destruction phase.
+
+    * July 22, 1999
+      DBI::IB, a DBI emulation layer for IBPerl is publicly
+      announced.
+
+TODO
+    Independent implementation from IBPerl.
+
+ACKNOWLEDGEMENT
+    Bill Karwin <bkarwin@interbase.com>, Tim Bunce <timbo@ig.co.uk>
+
+AUTHOR
+    Copyright (c) 1999 Edwin Pratomo <ed.pratomo@computer.org>.
+
+    All rights reserved. This is a free code, available as-is; you
+    can redistribute it and/or modify it under the same terms as
+    Perl itself.
+
+SEE ALSO
+    DBI(3), IBPerl(1).
+

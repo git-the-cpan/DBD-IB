@@ -1,0 +1,18 @@
+There should be a database perl_example.gdb exists before running the 
+example scripts in this directory. The database should contains an empty table 
+SIMPLE.
+
+1. insert.pl - insert some records into table SIMPLE
+   using: prepare,
+			execute (within loop)
+   with placeholders / bind values. AutoCommit on.
+2. insdo.pl - insert using do() and placeholders. AutoCommit off.
+3. select.pl - select and fetch the result
+   using: prepare,
+			execute,
+			fetchrow_array
+4. del.pl - delete all inserted record
+   using: prepare,
+			execute
+
+			
